@@ -1,8 +1,8 @@
+import re
 from dataclasses import dataclass, field
 from xml.etree import ElementTree
 
 from skhep.math import LorentzVector
-
 
 @dataclass
 class Particle:
@@ -32,16 +32,30 @@ class Event:
 
 
 class LHEReader():
-    def __init__(self, file_path):
+    def __init__(self, file_path, weight_mode='list', weight_regex = '.*'):
+        '''
+        Constructor.
+
+        :param file_path: Path to input LHE file
+        :type file_path: string
+        :param weight_mode: Format to return weights as. Can be dict or list. If dict, weight IDs are used as keys.
+        :type weight_mode: string
+        :param weight_regex: Regular expression to select weights to be read. Defaults to reading all.
+        :type weight_regex: string
+        '''
         self.file_path = file_path
         self.iterator = ElementTree.iterparse(self.file_path,events=('start','end'))
         self.current = None
         self.current_weights = None
 
+        assert(weight_mode in ['list','dict'])
+        self.weight_mode = weight_mode
+        self.weight_regex = re.compile(weight_regex)
+
     def unpack_from_iterator(self):
         # Read the lines for this event
         lines = self.current[1].text.strip().split("\n")
-        
+
         # Create a new event
         event = Event()
         event.scale = float(lines[0].strip().split()[3])
@@ -83,10 +97,26 @@ class LHEReader():
 
         # Loop over tags in this event
         element = next(self.iterator)
-        self.current_weights = []
+
+        if self.weight_mode == 'list':
+            self.current_weights = []
+        elif self.weight_mode == 'dict':
+            self.current_weights = {}
+
         while not (element[0]=='end' and element[1].tag == "event"):
             if element[0]=='end' and element[1].tag == 'wgt':
-                self.current_weights.append(float(element[1].text))
+
+                # If available, use "id" identifier as
+                # 1. filter which events to read
+                # 2. key for output dict
+                weight_id = element[1].attrib.get('id','')
+
+                if self.weight_regex.match(weight_id):
+                    value = float(element[1].text)
+                    if self.weight_mode == 'list':
+                        self.current_weights.append(value)
+                    elif self.weight_mode == 'dict':
+                        self.current_weights[weight_id] = value
             element = next(self.iterator)
 
         # Find end up this event in XML
