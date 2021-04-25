@@ -31,3 +31,18 @@ for iev, event in enumerate(reader):
 print(f'Mean mediator mass: {np.mean(mmed)}')
 print(f'Median mediator mass: {np.median(mmed)}')
 ```
+
+## Treatment of weights
+
+
+The parser assumes that each weight XML element has an attribute called `id` that uniquely identifies the weight per event. In practical terms, each entry should look roughly like this:
+
+```
+<wgt id='some string'> 123456.7 </wgt>
+```
+
+Weights are read in one of two modes: `list` or `dict`, which can be set via the `weight_mode` argument to the `LHEReader` constructor. In the first case, weights are returned as an unlabelled list in the order of appearance. In the second case, weights are returned as a dictionary per event, which the `id` attribute serving as the key, and the weight as the value. 
+
+The weights can easily be filtered using the `weight_regex` argument. Only weights with an `id` matching this regular expression will be returned.
+
+In case no `id` attribute can be found, the `dict` mode, as well as filtering are not supported
