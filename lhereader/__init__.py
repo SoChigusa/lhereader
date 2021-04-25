@@ -34,7 +34,7 @@ class Event:
 class LHEReader():
     def __init__(self, file_path):
         self.file_path = file_path
-        self.iterator = ElementTree.iterparse(self.file_path)
+        self.iterator = ElementTree.iterparse(self.file_path,events=('start','end'))
         self.current = None
         self.current_weights = None
 
@@ -76,17 +76,23 @@ class LHEReader():
         if(self.current):
             self.current[1].clear()
 
-        # Find next event in XML
+        # Find beginning of new event in XML
         element = next(self.iterator)
         while element[1].tag != "event":
             element = next(self.iterator)
-        self.current = element
 
-        # Weight information comes after
-        # the actual event
+        # Loop over tags in this event
         element = next(self.iterator)
         self.current_weights = []
-        while element[1].tag == "wgt":
-            self.current_weights.append(float(element[1].text))
+        while not (element[0]=='end' and element[1].tag == "event"):
+            if element[0]=='end' and element[1].tag == 'wgt':
+                self.current_weights.append(float(element[1].text))
             element = next(self.iterator)
+
+        # Find end up this event in XML
+        # use it to construct particles, etc
+        while not (element[0]=='end' and element[1].tag == "event"):
+            element = next(self.iterator)
+        self.current = element
+
         return self.unpack_from_iterator()
