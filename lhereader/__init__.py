@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass, field
 from xml.etree import ElementTree
 
-from skhep.math import LorentzVector
+import vector
 
 @dataclass
 class Particle:
@@ -18,7 +18,7 @@ class Particle:
     parent: int
 
     def p4(self):
-        return LorentzVector(self.px, self.py, self.pz, self.energy)
+        return vector.obj(px=self.px, py=self.py, pz=self.pz, E=self.energy)
 
 
 @dataclass
